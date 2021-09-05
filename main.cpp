@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <functional>
-#include <cassert>
+#include <rapidcheck.h>
 
 template<typename T>
 using Parser = std::function<std::optional<std::pair<T, std::string>>(std::string)>;
@@ -96,74 +96,105 @@ Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) noexcept {
 	};
 }
 
-void test1() {
-	auto a = parse(doer<char>(
-		{
-			item(),
-			success('c')
-		}
-	), "input");
+void test() {
+	rc::check("remove first char",
+	          [](const std::string &input) {
+		          auto a = parse(doer<char>(
+			          {
+				          item(),
+				          success('c')
+			          }
+		          ), input);
 
-	auto t = std::optional<std::pair<char, std::string>>(std::pair<char, std::string>('c', "nput"));
-	assert(a == t);
-}
+		          if(input.empty()) {
+			          RC_ASSERT(!a.has_value());
+		          } else {
+			          RC_ASSERT(a.has_value());
+			          auto t = std::pair<char, std::string>('c', input.substr(1));
+			          RC_ASSERT(a.value() == t);
+		          }
+	          });
+	rc::check("get first char",
+	          [](const std::string &input) {
+		          RC_PRE(!input.empty());
+		          char x;
+		          auto a = parse(doer<char>({
+			                                    assign<char>(x, item()),
+			                                    success(x)
+		                                    }),
+		                         input);
+		          RC_ASSERT(x == input[0]);
+	          });
+	rc::check("fail and follow execution",
+	          [](const std::string &input) {
+		          RC_PRE(!input.empty());
+		          auto a = parse(failure<char> + item(), input);
 
-void test2() {
-	auto a = parse(failure<char> + item(), "input");
+		          RC_ASSERT(a.has_value());
+		          auto t = std::pair<char, std::string>(input[0], input.substr(1));
+		          RC_ASSERT(a.value() == t);
+	          });
+	rc::check("get 1 char, fail and get n chars",
+	          [](const unsigned short &value) {
+		          RC_PRE(0 < value);
 
-	auto t = std::optional<std::pair<char, std::string>>(std::pair<char, std::string>('i', "nput"));
-	assert(a == t);
-}
+				  std::string input(value, 'a');
+		          std::vector<Parser<char>> v(value, item());
+		          auto a = parse(
+			          doer<char>({item(), failure<char>, success<char>('x')})
+			          + doer<char>({doer<char>(v), success<char>('c')}),
+			          input);
 
-void test3() {
-	auto a = parse(
-		doer<char>({item(),failure<char>,success<char>('c')})
-		+ doer<char>({item(),item(),success<char>('c')}),
-		"input");
 
-	auto t = std::optional<std::pair<char, std::string>>(std::pair<char, std::string>('c', "put"));
-	assert(a == t);
-}
+		          RC_ASSERT(a.has_value());
+		          auto t = std::pair<char, std::string>('c', input.substr(value));
+		          RC_ASSERT(a.value() == t);
+	          });
+	rc::check("multiple assigns",
+	          [](const std::string &input) {
+		          RC_PRE(2 <= input.size());
 
-void test4() {
-	char x;
-	char y;
-	auto a = parse(doer<char>(
-		{
-			assign<char>(x, item()),
-			assign<char>(y, item()),
-			success(x)
-		}
-	), "input");
+		          char x;
+		          char y;
+		          auto a = parse(doer<char>(
+			          {
+				          assign<char>(x, item()),
+				          assign<char>(y, item()),
+				          success('c')
+			          }
+		          ), input);
 
-	assert(x == 'i');
-	assert(y == 'n');
-	auto t = std::optional<std::pair<char, std::string>>(std::pair<char, std::string>('i', "put"));
-	assert(a == t);
-}
+		          RC_ASSERT(a.has_value());
+		          RC_ASSERT(x == input[0]);
+		          RC_ASSERT(y == input[1]);
+		          auto t = std::pair<char, std::string>('c', input.substr(2));
+		          RC_ASSERT(a.value() == t);
+	          });
+	/*TODO fix
+	rc::check("test character",
+	          [](const std::string &input) {
+		          char x;
 
-void test5() {
-	char x;
+		          auto a = parse<char>(doer<char>(
+			          {
+				          character('('),
+				          assign(x, item()),
+				          character(')'),
+			          }
+		          ), "(i)" + input);
 
-	auto a = parse<char>(doer<char>(
-		{
-			character('('),
-			assign(x, item()),
-			character(')'),
-		}
-	), "(i)");
-
-	assert(x == 'i');
-	auto t = std::optional<std::pair<char, std::string>>(std::pair<char, std::string>(')', ""));
-	assert(a == t);
+		          RC_ASSERT(a.has_value());
+		          RC_ASSERT(x == 'i');
+		          auto t = std::pair<char, std::string>(')', "");
+		          RC_ASSERT(a.value() == t);
+	          });
+	*/
 }
 
 int main() {
-	test1();
-	test2();
-	test3();
-	test4();
-	//TODO doesnt pass test5();
+	test();
+
+	std::cout << std::flush;
 
 	char x;
 	char y;
@@ -180,6 +211,5 @@ int main() {
 		std::cout << "(" << a.value().first << ", " << a.value().second << ")";
 	}
 	std::cout << "]";
-
 	return 0;
 }
