@@ -19,25 +19,50 @@ Parser<T> success(const T& ret) {
 	};
 }
 
-template<typename T>
-Parser<T> doer(const std::vector<Parser<T>>& parsers) {
-	return [&parsers](const std::string &s) {
-		if(parsers.empty()) {
-			return failure<T>(s);
+template<typename ... Ts>
+struct final_type {
+	static_assert(sizeof...(Ts) > 0);
+	using type = typename decltype((std::type_identity<Ts>{}, ...))::type;
+};
+
+template<typename T1, typename T2>
+Parser<T2> doer_impl(const Parser<T1>& parser1, const Parser<T2>& parser2) {
+	return [parser1, parser2](const std::string &s) {
+		if(s.empty()) {
+			return failure<T2>(s);
 		}
 
-		auto f = parsers.front()(s);
+		auto f = parser1(s);
 
-		for (int i = 1; i < parsers.size(); ++i) {
-			if(!f.has_value()) {
-				return failure<T>(s);
-			}
-
-			f = parsers[i](f.value().second);
+		if(!f.has_value()) {
+			return failure<T2>(s);
 		}
+
+		f = parser2(f.value().second);
 
 		return f;
 	};
+}
+
+// Base Case - Return the only remaining element.
+template<typename T1>
+static Parser<T1> fold(const Parser<T1>& v){
+	return v;
+}
+
+// General Case - Apply function to current element
+// and folded output of the previous elements.
+template<typename T1, typename... Args, typename std::enable_if_t<(sizeof...(Args) > 0), int> = 0, typename = void>
+static Parser<typename final_type<Args...>::type> fold(const Parser<T1>& first, const Parser<Args>& ... args) {
+	using Tn = typename final_type<Args...>::type;
+	return doer_impl<T1, Tn>(first, fold(args...));
+}
+
+template<typename ... Ts>
+Parser<typename final_type<Ts...>::type> doer(const Parser<Ts>& ... parser) {
+	static_assert(sizeof...(Ts) > 0, "can't have 0 params");
+
+	return fold(parser...);
 }
 
 template<typename T>
@@ -68,12 +93,10 @@ Parser<T> sat(const std::function<bool(T)>& f) {
 	return [f](const std::string& input) {
 		char x;
 
-		return doer<T>(
-			{
-				assign(x, item()),
-				[&x, &f](const std::string &s) {
-					return f(x) ? success<T>(x)(s) : failure<T>(s);
-				}
+		return doer<T, T>(
+			assign(x, item()),
+			[&x, &f](const std::string &s) {
+				return f(x) ? success<T>(x)(s) : failure<T>(s);
 			}
 		)(input);
 	};
@@ -93,7 +116,7 @@ std::optional<std::pair<char, std::string>> parse(const Parser<T> & parser, cons
 
 template<typename T>
 Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) noexcept {
-	return [&a, &b](const std::string & input) {
+	return [a, b](const std::string & input) {
 		auto r = parse(a, input);
 		if (!r.has_value()) {
 			return parse(b, input);

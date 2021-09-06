@@ -6,13 +6,11 @@ int main() {
 
 	char x;
 
-	auto a = parse<char>(doer<char>(
-		{
-			character('('),
-			assign(x, item()),
-			character(')'),
-			success(x)
-		}
+	auto a = parse<char>(doer(
+		character('('),
+		assign(x, item()),
+		character(')'),
+		success(x)
 	), "(i)");
 
 	std::cout << "[";

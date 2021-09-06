@@ -4,11 +4,9 @@
 void test() {
 	rc::check("remove first char",
 	          [](const std::string &input) {
-		          auto a = parse(doer<char>(
-			          {
-				          item(),
-				          success('c')
-			          }
+		          auto a = parse(doer(
+					  item(),
+					  success('c')
 		          ), input);
 
 		          if(input.empty()) {
@@ -23,10 +21,10 @@ void test() {
 	          [](const std::string &input) {
 		          RC_PRE(!input.empty());
 		          char x;
-		          auto a = parse(doer<char>({
-			                                    assign<char>(x, item()),
-			                                    success(x)
-		                                    }),
+		          auto a = parse(doer(
+					  assign<char>(x, item()),
+					  success(x)
+					  ),
 		                         input);
 		          RC_ASSERT(x == input[0]);
 	          });
@@ -39,20 +37,21 @@ void test() {
 		          auto t = std::pair<char, std::string>(input[0], input.substr(1));
 		          RC_ASSERT(a.value() == t);
 	          });
-	rc::check("get 1 char, fail and get n chars",
-	          [](const unsigned short &value) {
-		          RC_PRE(0 < value);
+	rc::check("get 1 char, fail and get 5 chars",
+	          []() {
+		          auto value = *rc::gen::inRange(5, 100);
 
 		          std::string input(value, 'a');
-		          std::vector<Parser<char>> v(value, item());
+
+				  auto f = doer(item(), item(), item(), item(), item());
+
 		          auto a = parse(
-			          doer<char>({item(), failure<char>, success<char>('x')})
-			          + doer<char>({doer<char>(v), success<char>('c')}),
+			          doer(item(), failure<char>, success('x'))
+			          + doer(f, success('c')),
 			          input);
 
-
 		          RC_ASSERT(a.has_value());
-		          auto t = std::pair<char, std::string>('c', input.substr(value));
+		          auto t = std::pair<char, std::string>('c', input.substr(5));
 		          RC_ASSERT(a.value() == t);
 	          });
 	rc::check("multiple assigns",
@@ -61,12 +60,10 @@ void test() {
 
 		          char x;
 		          char y;
-		          auto a = parse(doer<char>(
-			          {
+		          auto a = parse(doer(
 				          assign<char>(x, item()),
 				          assign<char>(y, item()),
 				          success('c')
-			          }
 		          ), input);
 
 		          RC_ASSERT(a.has_value());
@@ -79,13 +76,11 @@ void test() {
 	          [](const std::string &input) {
 		          char x;
 
-		          auto a = parse<char>(doer<char>(
-			          {
+		          auto a = parse<char>(doer<char, char, char, char>(
 				          character('('),
 				          assign(x, item()),
 				          character(')'),
 						  success(x)
-			          }
 		          ), "(i)" + input);
 
 		          RC_ASSERT(a.has_value());
