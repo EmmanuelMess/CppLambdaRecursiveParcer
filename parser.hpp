@@ -63,15 +63,16 @@ Parser<char> item() {
 	};
 }
 
-Parser<char> sat(const std::function<bool(char)>& f) {
+template<typename T>
+Parser<T> sat(const std::function<bool(T)>& f) {
 	return [f](const std::string& input) {
 		char x;
 
-		return doer<char>(
+		return doer<T>(
 			{
 				assign(x, item()),
 				[&x, &f](const std::string &s) {
-					return f(x) ? success(x)(s) : failure<char>(s);
+					return f(x) ? success<T>(x)(s) : failure<T>(s);
 				}
 			}
 		)(input);
@@ -79,7 +80,7 @@ Parser<char> sat(const std::function<bool(char)>& f) {
 }
 
 Parser<char> character(const char& c) {
-	return sat([&c](char other){
+	return sat<char>([&c](char other){
 		return c == other;
 	});
 }
