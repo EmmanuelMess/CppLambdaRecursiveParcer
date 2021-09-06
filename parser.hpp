@@ -21,7 +21,7 @@ Parser<T> success(const T& ret) {
 
 template<typename T>
 Parser<T> doer(const std::vector<Parser<T>>& parsers) {
-	return [parsers](const std::string &s) {
+	return [&parsers](const std::string &s) {
 		if(parsers.empty()) {
 			return failure<T>(s);
 		}
@@ -53,24 +53,29 @@ Parser<T> assign(T& x, const Parser<T>& parser) {
 }
 
 Parser<char> item() {
-	return [](const std::string &s) {
-		if(s.empty()) {
-			return failure<char>(s);
+	return [](const std::string &input) {
+		if(input.empty()) {
+			return failure<char>(input);
 		}
 
-		return std::optional<std::pair<char, std::string>>(std::pair<char, std::string>(s[0], s.substr(1)));
+		auto t = std::pair<char, std::string>(input[0], input.substr(1));
+		return std::optional<std::pair<char, std::string>>(t);
 	};
 }
 
-Parser<char> sat(const std::function<bool(char)> f) {
-	char x;
+Parser<char> sat(const std::function<bool(char)>& f) {
+	return [f](const std::string& input) {
+		char x;
 
-	return doer<char>({
-		                  assign(x, item()),
-		                  [&x, &f](const std::string& s) {
-			                  return f(x)? success(x)(s) : failure<char>(s);
-		                  }
-	                  });
+		return doer<char>(
+			{
+				assign(x, item()),
+				[&x, &f](const std::string &s) {
+					return f(x) ? success(x)(s) : failure<char>(s);
+				}
+			}
+		)(input);
+	};
 }
 
 Parser<char> character(const char& c) {
@@ -87,7 +92,7 @@ std::optional<std::pair<char, std::string>> parse(const Parser<T> & parser, cons
 
 template<typename T>
 Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) noexcept {
-	return [&](const std::string & input) {
+	return [&a, &b](const std::string & input) {
 		auto r = parse(a, input);
 		if (!r.has_value()) {
 			return parse(b, input);

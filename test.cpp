@@ -75,7 +75,6 @@ void test() {
 		          auto t = std::pair<char, std::string>('c', input.substr(2));
 		          RC_ASSERT(a.value() == t);
 	          });
-	/*TODO fix
 	rc::check("test character",
 	          [](const std::string &input) {
 		          char x;
@@ -85,15 +84,15 @@ void test() {
 				          character('('),
 				          assign(x, item()),
 				          character(')'),
+						  success(x)
 			          }
 		          ), "(i)" + input);
 
 		          RC_ASSERT(a.has_value());
 		          RC_ASSERT(x == 'i');
-		          auto t = std::pair<char, std::string>(')', "");
+		          auto t = std::pair<char, std::string>(x, input);
 		          RC_ASSERT(a.value() == t);
 	          });
-	*/
 }
 
 int main() {

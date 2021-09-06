@@ -5,18 +5,19 @@ int main() {
 	std::cout << std::flush;
 
 	char x;
-	char y;
-	auto a = parse(doer<char>(
+
+	auto a = parse<char>(doer<char>(
 		{
-			assign<char>(x, item()),
-			assign<char>(y, item()),
+			character('('),
+			assign(x, item()),
+			character(')'),
 			success(x)
 		}
-	), "input");
+	), "(i)");
 
 	std::cout << "[";
 	if (a.has_value()) {
-		std::cout << "(" << a.value().first << ", " << a.value().second << ")";
+		std::cout << "('" << a.value().first << "', '" << a.value().second << "')";
 	}
 	std::cout << "]";
 	return 0;
