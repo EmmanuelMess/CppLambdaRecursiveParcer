@@ -6,12 +6,15 @@ int main() {
 
 	char x;
 
-	auto a = parse<char>(doer(
-		character('('),
-		assign(x, item()),
-		character(')'),
-		success(x)
-	), "(i)");
+	Parser<char> f =
+		doer(
+			character('('),
+			f + assign(x, item()),
+			character(')')
+		)
+		+ doer(success(x));
+
+	auto a = parse(f, "(i)");
 
 	std::cout << "[";
 	if (a.has_value()) {

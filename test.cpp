@@ -76,7 +76,7 @@ void test() {
 	          [](const std::string &input) {
 		          char x;
 
-		          auto a = parse<char>(doer<char, char, char, char>(
+		          auto a = parse(doer(
 				          character('('),
 				          assign(x, item()),
 				          character(')'),
@@ -86,6 +86,26 @@ void test() {
 		          RC_ASSERT(a.has_value());
 		          RC_ASSERT(x == 'i');
 		          auto t = std::pair<char, std::string>(x, input);
+		          RC_ASSERT(a.value() == t);
+	          });
+
+	rc::check("test parens",
+	          [](const std::string &input) {
+		          char x;
+
+		          Parser<char> f =
+					  doer(
+						  character('('),
+						  f + assign(x, item()),
+						  character(')')
+						  )
+					  + doer(success(x));
+
+		          auto a = parse(f, "(i)");
+
+		          RC_ASSERT(a.has_value());
+		          RC_ASSERT(x == 'i');
+		          auto t = std::pair<char, std::string>(x, "");
 		          RC_ASSERT(a.value() == t);
 	          });
 }

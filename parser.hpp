@@ -44,14 +44,11 @@ Parser<T2> doer_impl(const Parser<T1>& parser1, const Parser<T2>& parser2) {
 	};
 }
 
-// Base Case - Return the only remaining element.
 template<typename T1>
 static Parser<T1> fold(const Parser<T1>& v){
 	return v;
 }
 
-// General Case - Apply function to current element
-// and folded output of the previous elements.
 template<typename T1, typename... Args, typename std::enable_if_t<(sizeof...(Args) > 0), int> = 0, typename = void>
 static Parser<typename final_type<Args...>::type> fold(const Parser<T1>& first, const Parser<Args>& ... args) {
 	using Tn = typename final_type<Args...>::type;
@@ -90,7 +87,7 @@ Parser<char> item() {
 
 template<typename T>
 Parser<T> sat(const std::function<bool(T)>& f) {
-	return [f](const std::string& input) {
+	return [&f](const std::string& input) {
 		char x;
 
 		return doer<T, T>(
@@ -103,9 +100,13 @@ Parser<T> sat(const std::function<bool(T)>& f) {
 }
 
 Parser<char> character(const char& c) {
-	return sat<char>([&c](char other){
-		return c == other;
-	});
+	return [&c](const std::string &input) {
+		auto f = [&c](char other) {
+			return c == other;
+		};
+
+		return sat<char>(f)(input);
+	};
 }
 
 
@@ -115,7 +116,7 @@ std::optional<std::pair<char, std::string>> parse(const Parser<T> & parser, cons
 }
 
 template<typename T>
-Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) noexcept {
+Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) {
 	return [a, b](const std::string & input) {
 		auto r = parse(a, input);
 		if (!r.has_value()) {
