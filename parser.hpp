@@ -26,7 +26,7 @@ struct final_type {
 };
 
 template<typename T1, typename T2>
-Parser<T2> doer_impl(const Parser<T1>& parser1, const Parser<T2>& parser2) {
+static Parser<T2> doer_impl(const Parser<T1>& parser1, const Parser<T2>& parser2) {
 	return [parser1, parser2](const std::string &s) {
 		if(s.empty()) {
 			return failure<T2>(s);
@@ -126,4 +126,20 @@ Parser<T> operator+(const Parser<T>& a, const Parser<T>& b) {
 		}
 	};
 }
+
+template <typename T>
+struct y_combinator {
+	std::function<Parser<T>(const y_combinator<T>&)> f;
+
+	Parser<T> operator()() const {
+		//TODO make this implicit
+		return f(*this);
+	}
+};
+
+template <typename T>
+Parser<T> recursiveCombinator(const std::function<Parser<T>(const y_combinator<T>&)>& combinator) {
+	return y_combinator<char> { .f = combinator }();
+}
+
 #endif //CPPPARSERTEST_PARSER_HPP

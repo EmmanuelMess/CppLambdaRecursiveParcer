@@ -91,17 +91,21 @@ void test() {
 
 	rc::check("test parens",
 	          [](const std::string &input) {
+
 		          char x;
 
-		          Parser<char> f =
-					  doer(
-						  character('('),
-						  f + assign(x, item()),
-						  character(')')
-						  )
-					  + doer(success(x));
+		          auto m = [&x](const y_combinator<char>& conb) {
+			          return doer(
+				          character('('),
+				          conb() + assign(x, item()),
+				          character(')')
+			          )
+			                 + doer(success(x));
+		          };
 
-		          auto a = parse(f, "(i)");
+		          auto fun = recursiveCombinator<char>(m);
+
+		          auto a = parse(fun, "(i)");
 
 		          RC_ASSERT(a.has_value());
 		          RC_ASSERT(x == 'i');

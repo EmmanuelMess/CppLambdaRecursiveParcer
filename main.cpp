@@ -6,15 +6,18 @@ int main() {
 
 	char x;
 
-	Parser<char> f =
-		doer(
+	auto m = [&x](const y_combinator<char>& conb) {
+		return doer(
 			character('('),
-			f + assign(x, item()),
+			conb() + assign(x, item()),
 			character(')')
 		)
 		+ doer(success(x));
+	};
 
-	auto a = parse(f, "(i)");
+	auto fun = recursiveCombinator<char>(m);
+
+	auto a = parse(fun, "(i)");
 
 	std::cout << "[";
 	if (a.has_value()) {
